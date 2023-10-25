@@ -1,7 +1,8 @@
 {
-  "name": "erc4626-adapter",
+  "name": "@mimic-fi/erc4626-adapter",
+  "private": true,
   "version": "0.0.1",
-  "license": "GPL-3.0",
+  "license": "Private",
   "engines": {
     "node": ">=16.0.0"
   },
@@ -12,17 +13,17 @@
     "!contracts/test/*"
   ],
   "scripts": {
-    "build": "yarn compile",
+    "build": "yarn compile && rm -rf dist && tsc",
     "compile": "hardhat compile",
     "lint": "yarn lint:solidity && yarn lint:typescript",
-    "lint:solidity": "solhint 'contracts/**/*.sol'",
+    "lint:solidity": "solhint 'contracts/**/*.sol' --config ./node_modules/solhint-config-mimic/index.js",
     "lint:typescript": "eslint . --ext .ts",
     "test": "hardhat test",
     "prepare": "yarn build"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "4.7.0",
-    "@mimic-fi/v3-helpers": "0.1.0"
+    "@mimic-fi/v3-helpers": "0.1.0",
+    "@openzeppelin/contracts": "4.9.3"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.3",
