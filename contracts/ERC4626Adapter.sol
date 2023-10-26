@@ -37,8 +37,8 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
     // Fee collector
     address public override feeCollector;
 
-    // Total invested assets. This is the total amount of assets over which the fee has already been charged.
-    uint256 public override totalInvested;
+    // Total amount of assets over which the fee has already been charged
+    uint256 public override totalNetAssets;
 
     /**
      * @dev Creates a new ERC4626 adapter contract
@@ -66,14 +66,14 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
      * @dev Tells the total amount of shares
      */
     function totalSupply() public view override(IERC20, ERC20) returns (uint256) {
-        return super.totalSupply() + _pendingSharesFeeToCharge();
+        return super.totalSupply() + _pendingFeesInShareValue();
     }
 
     /**
      * @dev Tells the amount of shares of an account
      */
     function balanceOf(address account) public view override(IERC20, ERC20) returns (uint256) {
-        return super.balanceOf(account) + (account == feeCollector ? _pendingSharesFeeToCharge() : 0);
+        return super.balanceOf(account) + (account == feeCollector ? _pendingFeesInShareValue() : 0);
     }
 
     /**
@@ -107,7 +107,7 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
         IERC20(erc4626.asset()).approve(address(erc4626), assets);
         erc4626.deposit(assets, address(this));
 
-        totalInvested = totalAssets();
+        totalNetAssets = totalAssets();
     }
 
     /**
@@ -128,25 +128,26 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
 
         super._withdraw(caller, receiver, owner, assets, shares);
 
-        totalInvested = totalAssets();
+        totalNetAssets = totalAssets();
     }
 
     /**
      * @dev Tells the fees in share value which have not been charged yet
      */
-    function _pendingSharesFeeToCharge() private view returns (uint256) {
+    function _pendingFeesInShareValue() private view returns (uint256) {
         uint256 _totalAssets = totalAssets();
-        if (_totalAssets == totalInvested) return 0;
-        uint256 pendingAssetsFeeToCharge = (_totalAssets - totalInvested).mulUp(feePct);
-        uint256 prevShareValue = (_totalAssets - pendingAssetsFeeToCharge).divDown(super.totalSupply());
-        return pendingAssetsFeeToCharge.divUp(prevShareValue);
+        uint256 totalGrossAssets = _totalAssets - totalNetAssets;
+        if (totalGrossAssets == 0) return 0;
+        uint256 pendingFees = (totalGrossAssets).mulUp(feePct);
+        uint256 prevShareValue = (_totalAssets - pendingFees).divDown(super.totalSupply());
+        return pendingFees.divUp(prevShareValue);
     }
 
     /**
      * @dev Settles the fees which have not been charged yet
      */
     function _settleFees() private {
-        uint256 sharesFee = _pendingSharesFeeToCharge();
+        uint256 sharesFee = _pendingFeesInShareValue();
         _mint(feeCollector, sharesFee);
         emit FeesSettled(feeCollector, sharesFee);
     }

@@ -19,7 +19,7 @@ describe('ERC4626 Adapter', () => {
     userCShares: BigNumber
     userCUnderlying: BigNumber
     totalShares: BigNumber
-    totalInvested: BigNumber
+    totalNetAssets: BigNumber
   }) {
     it('total underlying', async function () {
       expect(await erc4626Adapter.convertToAssets(await erc4626Adapter.totalSupply())).to.be.equal(
@@ -66,7 +66,7 @@ describe('ERC4626 Adapter', () => {
     })
 
     it('total invested', async function () {
-      expect(await erc4626Adapter.totalInvested()).to.be.equal(status.totalInvested)
+      expect(await erc4626Adapter.totalNetAssets()).to.be.equal(status.totalNetAssets)
     })
   }
 
@@ -111,7 +111,7 @@ describe('ERC4626 Adapter', () => {
       userCShares: fp(0),
       userCUnderlying: fp(0),
       totalShares: fp(100),
-      totalInvested: fp(100),
+      totalNetAssets: fp(100),
     })
   })
 
@@ -132,7 +132,7 @@ describe('ERC4626 Adapter', () => {
       userCShares: userCShares,
       userCUnderlying: fp(20).add(2),
       totalShares: fp(100).add(userCShares),
-      totalInvested: fp(100),
+      totalNetAssets: fp(100),
     })
   })
 
@@ -155,7 +155,7 @@ describe('ERC4626 Adapter', () => {
       userCShares: userCShares,
       userCUnderlying: fp(20).add(2),
       totalShares: fp(100).add(userCShares).add(userBShares),
-      totalInvested: fp(330),
+      totalNetAssets: fp(330),
     })
   })
 
@@ -177,7 +177,7 @@ describe('ERC4626 Adapter', () => {
       userCShares: bn('13345864661654135341'),
       userCUnderlying: bn('71000000000000000013'),
       totalShares: bn('124060150375939849626'),
-      totalInvested: fp(330),
+      totalNetAssets: fp(330),
     })
   })
 
@@ -199,7 +199,7 @@ describe('ERC4626 Adapter', () => {
       userCShares: bn('13345864661654135341'),
       userCUnderlying: bn('71000000000000000013'),
       totalShares: bn('124060150375939849626').sub(fp(50)),
-      totalInvested: fp(394).add(5),
+      totalNetAssets: fp(394).add(5),
     })
   })
 })
