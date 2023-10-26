@@ -72,7 +72,7 @@ describe('ERC4626 Adapter', () => {
 
   before('setup signers', async () => {
     // eslint-disable-next-line prettier/prettier
-    ;[, userA, userB, userC] = await getSigners()
+    [, userA, userB, userC] = await getSigners()
   })
 
   before('create token and erc4626', async () => {

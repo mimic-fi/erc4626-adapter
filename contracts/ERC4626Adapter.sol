@@ -14,69 +14,60 @@
 
 pragma solidity ^0.8.0;
 
-import '@mimic-fi/v3-helpers/contracts/math/FixedPoint.sol';
 import '@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol';
+
+import '@mimic-fi/v3-helpers/contracts/math/FixedPoint.sol';
+
 import './interfaces/IERC4626Adapter.sol';
 
-contract ERC4626Adapter is ERC4626, IERC4626Adapter {
+contract ERC4626Adapter is IERC4626Adapter, ERC4626 {
     using FixedPoint for uint256;
 
-    IERC4626 private immutable _erc4626;
-    uint256 private immutable _fee; //TODO: must be posible to reduce it
-    address private immutable _feeCollector; //TODO: must be posible to change it
+    IERC4626 private immutable erc4626;
+    uint256 private immutable fee; //TODO: must be posible to reduce it
+    address private immutable feeCollector; //TODO: must be posible to change it
+    uint256 public override totalInvested;
 
-    uint256 private _totalInvested;
-
-    constructor(
-        IERC4626 erc4626_,
-        uint256 fee_,
-        address feeCollector_
-    ) 
-    ERC20( IERC20Metadata(erc4626_.asset()).symbol(), IERC20Metadata(erc4626_.asset()).name())
-    ERC4626(IERC20Metadata(erc4626_.asset()))  {
-        _erc4626 = erc4626_;
-        _fee = fee_;
-        _feeCollector = feeCollector_;
+    constructor(IERC4626 _erc4626, uint256 _fee, address _feeCollector)
+        ERC20(IERC20Metadata(_erc4626.asset()).symbol(), IERC20Metadata(_erc4626.asset()).name())
+        ERC4626(IERC20Metadata(_erc4626.asset()))
+    {
+        erc4626 = _erc4626;
+        fee = _fee;
+        feeCollector = _feeCollector;
     }
 
-    function totalInvested() public view returns (uint256) {
-        return _totalInvested;
-    }
-
-    function totalAssets() public view override(IERC4626, ERC4626)  returns (uint256) {
-        return _erc4626.totalAssets();
+    function totalAssets() public view override(IERC4626, ERC4626) returns (uint256) {
+        return erc4626.totalAssets();
     }
 
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         _settleFees();
 
-        super._deposit( caller,  receiver,  assets,  shares);
+        super._deposit(caller, receiver, assets, shares);
 
-        IERC20(_erc4626.asset()).approve(address(_erc4626), assets);
-        _erc4626.deposit(assets, address(this));
+        IERC20(erc4626.asset()).approve(address(erc4626), assets);
+        erc4626.deposit(assets, address(this));
 
-        _totalInvested = _erc4626.totalAssets();
+        totalInvested = totalAssets();
     }
 
-    function _withdraw(
-        address caller,
-        address receiver,
-        address owner,
-        uint256 assets,
-        uint256 shares
-    ) internal override {
+    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
+        internal
+        override
+    {
         _settleFees();
 
-        _erc4626.withdraw(assets, address(this), address(this));
+        erc4626.withdraw(assets, address(this), address(this));
 
-        super._withdraw( caller,  receiver, owner, assets,  shares);
+        super._withdraw(caller, receiver, owner, assets, shares);
 
-        _totalInvested = _erc4626.totalAssets();
+        totalInvested = totalAssets();
     }
 
     function balanceOf(address account) public view override(IERC20, ERC20) returns (uint256) {
-        if(account == _feeCollector) {
-           return  super.balanceOf(account) + _pendingSharesFeeToCharge();
+        if (account == feeCollector) {
+            return super.balanceOf(account) + _pendingSharesFeeToCharge();
         }
         return super.balanceOf(account);
     }
@@ -86,14 +77,14 @@ contract ERC4626Adapter is ERC4626, IERC4626Adapter {
     }
 
     function _pendingSharesFeeToCharge() private view returns (uint256) {
-        if( _erc4626.totalAssets()  == 0 || _totalInvested == 0) return 0;
-        uint256 pendingAssetsFeeToCharge = (_erc4626.totalAssets() - _totalInvested).mulUp(_fee);
-        uint256 prevShareValue = (_erc4626.totalAssets() - pendingAssetsFeeToCharge).divDown(super.totalSupply());
+        uint256 _totalAssets = totalAssets();
+        if (_totalAssets == 0 || totalInvested == 0) return 0; // TODO: or _totalAssets == totalInvested instead?
+        uint256 pendingAssetsFeeToCharge = (_totalAssets - totalInvested).mulUp(fee);
+        uint256 prevShareValue = (_totalAssets - pendingAssetsFeeToCharge).divDown(super.totalSupply());
         return pendingAssetsFeeToCharge.divUp(prevShareValue);
     }
 
     function _settleFees() private {
-         _mint(_feeCollector, _pendingSharesFeeToCharge());
+        _mint(feeCollector, _pendingSharesFeeToCharge());
     }
-
 }

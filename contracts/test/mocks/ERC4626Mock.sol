@@ -5,7 +5,7 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol';
 
 contract ERC4626Mock is ERC4626 {
-    constructor(address underlying) ERC20("ERC4626Mock", "E4626M") ERC4626(IERC20Metadata(underlying)) {}
+    constructor(address underlying) ERC20('ERC4626Mock', 'E4626M') ERC4626(IERC20Metadata(underlying)) {}
 
     function mint(address account, uint256 amount) external {
         _mint(account, amount);
