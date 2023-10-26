@@ -17,5 +17,65 @@ pragma solidity ^0.8.0;
 import '@openzeppelin/contracts/interfaces/IERC4626.sol';
 
 interface IERC4626Adapter is IERC4626 {
+    /**
+     * @dev The requested percentage to be set is zero
+     */
+    error FeePctZero();
+
+    /**
+     * @dev The requested collector to be set is zero
+     */
+    error FeeCollectorZero();
+
+    /**
+     * @dev The requested percentage to be set is above one
+     */
+    error FeePctAboveOne();
+
+    /**
+     * @dev The requested percentage to be set is above the previous percentage set
+     */
+    error FeePctAbovePrevious(uint256 requestedPct, uint256 previousPct);
+
+    /**
+     * @dev Emitted every time the fee percentage is set
+     */
+    event FeePctSet(uint256 pct);
+
+    /**
+     * @dev Emitted every time the fee collector is set
+     */
+    event FeeCollectorSet(address collector);
+
+    /**
+     * @dev Tells the reference to the ERC4626 contract
+     */
+    function erc4626() external view returns (IERC4626);
+
+    /**
+     * @dev Tells the fee percentage
+     */
+    function feePct() external view returns (uint256);
+
+    /**
+     * @dev Tells the fee collector
+     */
+    function feeCollector() external view returns (address);
+
+    /**
+     * @dev Tells the total invested assets. This is the total amount of assets over which the fee has already been charged.
+     */
     function totalInvested() external view returns (uint256);
+
+    /**
+     * @dev Sets the fee percentage
+     * @param pct Fee percentage to be set
+     */
+    function setFeePct(uint256 pct) external;
+
+    /**
+     * @dev Sets the fee collector
+     * @param collector Fee collector to be set
+     */
+    function setFeeCollector(address collector) external;
 }

@@ -14,31 +14,55 @@
 
 pragma solidity ^0.8.0;
 
+import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol';
 
 import '@mimic-fi/v3-helpers/contracts/math/FixedPoint.sol';
 
 import './interfaces/IERC4626Adapter.sol';
 
-contract ERC4626Adapter is IERC4626Adapter, ERC4626 {
+contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
     using FixedPoint for uint256;
 
-    IERC4626 private immutable erc4626;
-    uint256 private immutable fee; //TODO: must be posible to reduce it
-    address private immutable feeCollector; //TODO: must be posible to change it
+    // Reference to the ERC4626 contract
+    IERC4626 public immutable override erc4626;
+
+    // Fee percentage
+    uint256 public override feePct;
+
+    // Fee collector
+    address public override feeCollector;
+
+    // Total invested assets. This is the total amount of assets over which the fee has already been charged.
     uint256 public override totalInvested;
 
-    constructor(IERC4626 _erc4626, uint256 _fee, address _feeCollector)
+    constructor(IERC4626 _erc4626, uint256 _feePct, address _feeCollector)
         ERC20(IERC20Metadata(_erc4626.asset()).symbol(), IERC20Metadata(_erc4626.asset()).name())
         ERC4626(IERC20Metadata(_erc4626.asset()))
     {
         erc4626 = _erc4626;
-        fee = _fee;
-        feeCollector = _feeCollector;
+        _setFeePct(_feePct);
+        _setFeeCollector(_feeCollector);
     }
 
     function totalAssets() public view override(IERC4626, ERC4626) returns (uint256) {
         return erc4626.totalAssets();
+    }
+
+    /**
+     * @dev Sets the fee percentage
+     * @param pct Fee percentage to be set
+     */
+    function setFeePct(uint256 pct) external override onlyOwner {
+        _setFeePct(pct);
+    }
+
+    /**
+     * @dev Sets the fee collector
+     * @param collector Fee collector to be set
+     */
+    function setFeeCollector(address collector) external override onlyOwner {
+        _setFeeCollector(collector);
     }
 
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
@@ -79,12 +103,39 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626 {
     function _pendingSharesFeeToCharge() private view returns (uint256) {
         uint256 _totalAssets = totalAssets();
         if (_totalAssets == 0 || totalInvested == 0) return 0; // TODO: or _totalAssets == totalInvested instead?
-        uint256 pendingAssetsFeeToCharge = (_totalAssets - totalInvested).mulUp(fee);
+        uint256 pendingAssetsFeeToCharge = (_totalAssets - totalInvested).mulUp(feePct);
         uint256 prevShareValue = (_totalAssets - pendingAssetsFeeToCharge).divDown(super.totalSupply());
         return pendingAssetsFeeToCharge.divUp(prevShareValue);
     }
 
     function _settleFees() private {
         _mint(feeCollector, _pendingSharesFeeToCharge());
+    }
+
+    /**
+     * @dev Sets the fee percentage
+     * @param pct Fee percentage to be set
+     */
+    function _setFeePct(uint256 pct) private {
+        if (pct == 0) revert FeePctZero();
+
+        if (feePct == 0) {
+            if (pct >= FixedPoint.ONE) revert FeePctAboveOne();
+        } else {
+            if (pct >= feePct) revert FeePctAbovePrevious(pct, feePct);
+        }
+
+        feePct = pct;
+        emit FeePctSet(pct);
+    }
+
+    /**
+     * @dev Sets the fee collector
+     * @param collector Fee collector to be set
+     */
+    function _setFeeCollector(address collector) private {
+        if (collector == address(0)) revert FeeCollectorZero();
+        feeCollector = collector;
+        emit FeeCollectorSet(collector);
     }
 }
