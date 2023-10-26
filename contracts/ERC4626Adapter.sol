@@ -21,6 +21,10 @@ import '@mimic-fi/v3-helpers/contracts/math/FixedPoint.sol';
 
 import './interfaces/IERC4626Adapter.sol';
 
+/**
+ * @title ERC4626 adapter
+ * @dev Adapter used to keep accounting of investments made using the ERC4626 standard
+ */
 contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
     using FixedPoint for uint256;
 
@@ -36,6 +40,12 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
     // Total invested assets. This is the total amount of assets over which the fee has already been charged.
     uint256 public override totalInvested;
 
+    /**
+     * @dev Creates a new ERC4626 adapter contract
+     * @param _erc4626 ERC4626 contract reference
+     * @param _feePct Fee percentage to be set
+     * @param _feeCollector Fee collector to be set
+     */
     constructor(IERC4626 _erc4626, uint256 _feePct, address _feeCollector)
         ERC20(IERC20Metadata(_erc4626.asset()).symbol(), IERC20Metadata(_erc4626.asset()).name())
         ERC4626(IERC20Metadata(_erc4626.asset()))
@@ -45,14 +55,23 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
         _setFeeCollector(_feeCollector);
     }
 
+    /**
+     * @dev Tells the total amount of assets
+     */
     function totalAssets() public view override(IERC4626, ERC4626) returns (uint256) {
         return erc4626.totalAssets();
     }
 
+    /**
+     * @dev Tells the total amount of shares
+     */
     function totalSupply() public view override(IERC20, ERC20) returns (uint256) {
         return super.totalSupply() + _pendingSharesFeeToCharge();
     }
 
+    /**
+     * @dev Tells the amount of shares of an account
+     */
     function balanceOf(address account) public view override(IERC20, ERC20) returns (uint256) {
         return super.balanceOf(account) + (account == feeCollector ? _pendingSharesFeeToCharge() : 0);
     }
@@ -73,6 +92,13 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
         _setFeeCollector(collector);
     }
 
+    /**
+     * @dev Deposits assets into an ERC4626 through the adapter
+     * @param caller Address of the caller
+     * @param receiver Address that will receive the shares
+     * @param assets Amount of assets to be deposited
+     * @param shares Amount of shares to be minted
+     */
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         _settleFees();
 
@@ -84,6 +110,14 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
         totalInvested = totalAssets();
     }
 
+    /**
+     * @dev Withdraws assets from an ERC4626 through the adapter
+     * @param caller Address of the caller
+     * @param receiver Address that will receive the assets
+     * @param owner Address that owns the shares
+     * @param assets Amount of assets to be withdrawn
+     * @param shares Amount of shares to be burnt
+     */
     function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
         internal
         override
@@ -97,6 +131,9 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
         totalInvested = totalAssets();
     }
 
+    /**
+     * @dev Tells the fees in share value which have not been charged yet
+     */
     function _pendingSharesFeeToCharge() private view returns (uint256) {
         uint256 _totalAssets = totalAssets();
         if (_totalAssets == totalInvested) return 0;
@@ -105,8 +142,13 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
         return pendingAssetsFeeToCharge.divUp(prevShareValue);
     }
 
+    /**
+     * @dev Settles the fees which have not been charged yet
+     */
     function _settleFees() private {
-        _mint(feeCollector, _pendingSharesFeeToCharge());
+        uint256 sharesFee = _pendingSharesFeeToCharge();
+        _mint(feeCollector, sharesFee);
+        emit FeesSettled(feeCollector, sharesFee);
     }
 
     /**

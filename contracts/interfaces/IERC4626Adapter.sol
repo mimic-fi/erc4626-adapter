@@ -12,10 +12,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import '@openzeppelin/contracts/interfaces/IERC4626.sol';
 
+/**
+ * @dev ERC4626 adapter interface
+ */
 interface IERC4626Adapter is IERC4626 {
     /**
      * @dev The requested percentage to be set is zero
@@ -46,6 +49,11 @@ interface IERC4626Adapter is IERC4626 {
      * @dev Emitted every time the fee collector is set
      */
     event FeeCollectorSet(address collector);
+
+    /**
+     * @dev Emitted every time fees are settled
+     */
+    event FeesSettled(address collector, uint256 amount);
 
     /**
      * @dev Tells the reference to the ERC4626 contract
