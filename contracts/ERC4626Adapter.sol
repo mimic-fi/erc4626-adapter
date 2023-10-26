@@ -49,6 +49,14 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
         return erc4626.totalAssets();
     }
 
+    function totalSupply() public view override(IERC20, ERC20) returns (uint256) {
+        return super.totalSupply() + _pendingSharesFeeToCharge();
+    }
+
+    function balanceOf(address account) public view override(IERC20, ERC20) returns (uint256) {
+        return super.balanceOf(account) + (account == feeCollector ? _pendingSharesFeeToCharge() : 0);
+    }
+
     /**
      * @dev Sets the fee percentage
      * @param pct Fee percentage to be set
@@ -89,20 +97,9 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
         totalInvested = totalAssets();
     }
 
-    function balanceOf(address account) public view override(IERC20, ERC20) returns (uint256) {
-        if (account == feeCollector) {
-            return super.balanceOf(account) + _pendingSharesFeeToCharge();
-        }
-        return super.balanceOf(account);
-    }
-
-    function totalSupply() public view override(IERC20, ERC20) returns (uint256) {
-        return super.totalSupply() + _pendingSharesFeeToCharge();
-    }
-
     function _pendingSharesFeeToCharge() private view returns (uint256) {
         uint256 _totalAssets = totalAssets();
-        if (_totalAssets == 0 || totalInvested == 0) return 0; // TODO: or _totalAssets == totalInvested instead?
+        if (_totalAssets == totalInvested) return 0;
         uint256 pendingAssetsFeeToCharge = (_totalAssets - totalInvested).mulUp(feePct);
         uint256 prevShareValue = (_totalAssets - pendingAssetsFeeToCharge).divDown(super.totalSupply());
         return pendingAssetsFeeToCharge.divUp(prevShareValue);
