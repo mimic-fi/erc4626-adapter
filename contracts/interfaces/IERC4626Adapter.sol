@@ -73,7 +73,7 @@ interface IERC4626Adapter is IERC4626 {
     /**
      * @dev Tells the total amount of assets over which the fee has already been charged
      */
-    function totalNetAssets() external view returns (uint256);
+    function previousTotalAssets() external view returns (uint256);
 
     /**
      * @dev Sets the fee percentage

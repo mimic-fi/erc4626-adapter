@@ -23,7 +23,7 @@ import './interfaces/IERC4626Adapter.sol';
 
 /**
  * @title ERC4626 adapter
- * @dev Adapter used to keep accounting of investments made using the ERC4626 standard
+ * @dev Adapter used to track the accounting of investments made through ERC4626 implementations
  */
 contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
     using FixedPoint for uint256;
@@ -38,7 +38,7 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
     address public override feeCollector;
 
     // Total amount of assets over which the fee has already been charged
-    uint256 public override totalNetAssets;
+    uint256 public override previousTotalAssets;
 
     /**
      * @dev Creates a new ERC4626 adapter contract
@@ -107,7 +107,7 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
         IERC20(erc4626.asset()).approve(address(erc4626), assets);
         erc4626.deposit(assets, address(this));
 
-        totalNetAssets = totalAssets();
+        previousTotalAssets = totalAssets();
     }
 
     /**
@@ -128,54 +128,60 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
 
         super._withdraw(caller, receiver, owner, assets, shares);
 
-        totalNetAssets = totalAssets();
+        previousTotalAssets = totalAssets();
     }
 
     /**
      * @dev Tells the fees in share value which have not been charged yet
      */
-    function _pendingFeesInShareValue() private view returns (uint256) {
+    function _pendingFeesInShareValue() internal view returns (uint256) {
         uint256 _totalAssets = totalAssets();
-        uint256 totalGrossAssets = _totalAssets - totalNetAssets;
-        if (totalGrossAssets == 0) return 0;
-        uint256 pendingFees = (totalGrossAssets).mulUp(feePct);
-        uint256 prevShareValue = (_totalAssets - pendingFees).divDown(super.totalSupply());
-        return pendingFees.divUp(prevShareValue);
+
+        // Note the following contemplates the scenario where there is no gain.
+        // Including the case of loss, which might be due to the underlying implementation not working as expected.
+        if (_totalAssets <= previousTotalAssets) return 0;
+        uint256 pendingFees = (_totalAssets - previousTotalAssets).mulUp(feePct);
+
+        // Note the following division uses `super.totalSupply` and not `totalSupply` (the overridden implementation).
+        // This means the total supply does not contemplate the `pendingFees`.
+        uint256 previousShareValue = (_totalAssets - pendingFees).divDown(super.totalSupply());
+
+        return pendingFees.divUp(previousShareValue);
     }
 
     /**
      * @dev Settles the fees which have not been charged yet
      */
-    function _settleFees() private {
-        uint256 sharesFee = _pendingFeesInShareValue();
-        _mint(feeCollector, sharesFee);
-        emit FeesSettled(feeCollector, sharesFee);
+    function _settleFees() internal {
+        uint256 feeAmount = _pendingFeesInShareValue();
+        _mint(feeCollector, feeAmount);
+        emit FeesSettled(feeCollector, feeAmount);
     }
 
     /**
      * @dev Sets the fee percentage
-     * @param pct Fee percentage to be set
+     * @param newFeePct Fee percentage to be set
      */
-    function _setFeePct(uint256 pct) private {
-        if (pct == 0) revert FeePctZero();
+    function _setFeePct(uint256 newFeePct) internal {
+        if (newFeePct == 0) revert FeePctZero();
 
         if (feePct == 0) {
-            if (pct >= FixedPoint.ONE) revert FeePctAboveOne();
+            if (newFeePct >= FixedPoint.ONE) revert FeePctAboveOne();
         } else {
-            if (pct >= feePct) revert FeePctAbovePrevious(pct, feePct);
+            if (newFeePct >= feePct) revert FeePctAbovePrevious(newFeePct, feePct);
         }
 
-        feePct = pct;
-        emit FeePctSet(pct);
+        feePct = newFeePct;
+        emit FeePctSet(newFeePct);
     }
 
     /**
      * @dev Sets the fee collector
-     * @param collector Fee collector to be set
+     * @param newFeeCollector Fee collector to be set
      */
-    function _setFeeCollector(address collector) private {
-        if (collector == address(0)) revert FeeCollectorZero();
-        feeCollector = collector;
-        emit FeeCollectorSet(collector);
+    function _setFeeCollector(address newFeeCollector) internal {
+        if (newFeeCollector == address(0)) revert FeeCollectorZero();
+        feeCollector = newFeeCollector;
+        emit FeeCollectorSet(newFeeCollector);
     }
 }
