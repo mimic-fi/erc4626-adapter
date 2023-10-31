@@ -13,24 +13,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Set up environment
-        uses: ./.github/actions/setup
       - name: Build
         run: yarn build
 
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Set up environment
-        uses: ./.github/actions/setup
       - name: Lint
         run: yarn lint
 
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Set up environment
-        uses: ./.github/actions/setup
       - name: Build
         run: yarn build
       - name: Test
