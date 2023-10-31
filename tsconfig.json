@@ -7,6 +7,9 @@
       "outDir": "dist",
       "esModuleInterop": true,
       "strict": true
-    }
+    },
+    "files": [
+      "hardhat.config.ts"
+    ]
   }
   
