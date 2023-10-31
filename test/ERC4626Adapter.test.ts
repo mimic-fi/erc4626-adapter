@@ -166,53 +166,53 @@ describe('ERC4626 Adapter', () => {
     }) {
       const ERROR = 1e-18
 
-      it('total assets', async function () {
+      it('updates total assets correctly', async function () {
         const totalAssets = await erc4626Adapter.totalAssets()
         assertAlmostEqual(totalAssets, status.totalAssets, ERROR)
       })
 
-      it('share value', async function () {
+      it('updates share value correctly', async function () {
         const actualShareValue = await erc4626Adapter.convertToAssets(fp(1))
         assertAlmostEqual(actualShareValue, status.shareValue, ERROR)
       })
 
-      it('userA shares', async function () {
+      it('updates userA shares correctly', async function () {
         expect(await erc4626Adapter.balanceOf(userA.address)).to.be.equal(status.userAShares)
       })
 
-      it('userA assets', async function () {
+      it('updates userA assets correctly', async function () {
         const userShares = await erc4626Adapter.balanceOf(userA.address)
         const actualUserAssets = await erc4626Adapter.convertToAssets(userShares)
         assertAlmostEqual(actualUserAssets, status.userAAssets, ERROR)
       })
 
-      it('userB shares', async function () {
+      it('updates userB shares correctly', async function () {
         expect(await erc4626Adapter.balanceOf(userB.address)).to.be.equal(status.userBShares)
       })
 
-      it('userB assets', async function () {
+      it('updates userB assets correctly', async function () {
         const userShares = await erc4626Adapter.balanceOf(userB.address)
         const actualUserAssets = await erc4626Adapter.convertToAssets(userShares)
         assertAlmostEqual(actualUserAssets, status.userBAssets, ERROR)
       })
 
-      it('userC shares', async function () {
+      it('updates userC shares correctly', async function () {
         const userShares = await erc4626Adapter.balanceOf(userC.address)
         assertAlmostEqual(userShares, status.userCShares, ERROR)
       })
 
-      it('userC assets', async function () {
+      it('updates userC assets correctly', async function () {
         const userShares = await erc4626Adapter.balanceOf(userC.address)
         const actualUserAssets = await erc4626Adapter.convertToAssets(userShares)
         assertAlmostEqual(actualUserAssets, status.userCAssets, ERROR)
       })
 
-      it('total shares', async function () {
+      it('updates total shares correctly', async function () {
         const actualTotalShares = await erc4626Adapter.totalSupply()
         assertAlmostEqual(actualTotalShares, status.totalShares, ERROR)
       })
 
-      it('previous total assets', async function () {
+      it('updates previous total assets correctly', async function () {
         const actualPreviousTotalAssets = await erc4626Adapter.previousTotalAssets()
         assertAlmostEqual(actualPreviousTotalAssets, status.previousTotalAssets, ERROR)
       })
@@ -235,123 +235,151 @@ describe('ERC4626 Adapter', () => {
       erc4626Adapter = await deploy('ERC4626Adapter', [erc4626Mock.address, fee, userC.address, owner.address])
     })
 
-    context('t1', async () => {
+    context('when userA deposits 100 assets', async () => {
+      let totalAssets: BigNumber, shareValue: BigNumber, userAShares: BigNumber, userAAssets: BigNumber
+      let userBShares: BigNumber, userBAssets: BigNumber, userCShares: BigNumber, userCAssets: BigNumber
+      let totalShares: BigNumber, previousTotalAssets: BigNumber
+
       const amount = fp(100)
 
-      before('user A deposits 100', async () => {
+      const calculateUserAssets = (userShares: BigNumber) => {
+        return userShares.mul(shareValue).div(fp(1))
+      }
+
+      before('deposit 100 assets for userA', async () => {
         await token.connect(userA).approve(erc4626Adapter.address, amount)
         await erc4626Adapter.connect(userA).deposit(amount, userA.address)
       })
 
+      totalAssets = amount // 100
+      shareValue = fp(1)
+      userAShares = amount // 100
+      userAAssets = amount // 100
+      totalShares = amount // 100
+      previousTotalAssets = amount // 100
+
       checkStatus({
-        totalAssets: amount,
-        shareValue: fp(1),
-        userAShares: amount,
-        userAAssets: amount,
+        totalAssets,
+        shareValue,
+        userAShares,
+        userAAssets,
         userBShares: fp(0),
         userBAssets: fp(0),
         userCShares: fp(0),
         userCAssets: fp(0),
-        totalShares: amount,
-        previousTotalAssets: amount,
+        totalShares,
+        previousTotalAssets,
       })
-    })
 
-    context('t2.1', async () => {
-      before('assets triplicate', async () => {
+      context('when assets triplicate', async () => {
         const amount = fp(200)
-        await token.mint(erc4626Mock.address, amount)
-      })
 
-      const userAShares = fp(100)
-      const userCShares = fp(20).mul(fp(1)).div(fp(2.8)) // 7.14
-      checkStatus({
-        totalAssets: fp(300),
-        shareValue: fp(2.8),
-        userAShares,
-        userAAssets: fp(280),
-        userBShares: fp(0),
-        userBAssets: fp(0),
-        userCShares: userCShares,
-        userCAssets: fp(20),
-        totalShares: userAShares.add(userCShares), // 107.14
-        previousTotalAssets: fp(100),
-      })
-    })
+        before('triplicate assets', async () => {
+          await token.mint(erc4626Mock.address, amount)
+        })
 
-    context('t2.2', async () => {
-      const amount = fp(30)
+        totalAssets = totalAssets.add(amount) // 300
+        shareValue = fp(2.8)
+        userAAssets = calculateUserAssets(userAShares) // 280
+        userCAssets = totalAssets.sub(previousTotalAssets).mul(fee).div(fp(1)) // 20
+        userCShares = userCAssets.mul(fp(1)).div(shareValue) // 7.14
+        ;(totalShares = totalShares.add(userCShares)), // 107.14
+          checkStatus({
+            totalAssets,
+            shareValue,
+            userAShares,
+            userAAssets,
+            userBShares: fp(0),
+            userBAssets: fp(0),
+            userCShares,
+            userCAssets,
+            totalShares,
+            previousTotalAssets,
+          })
 
-      before('user B deposits 30', async () => {
-        await token.connect(userB).approve(erc4626Adapter.address, amount)
-        await erc4626Adapter.connect(userB).deposit(amount, userB.address)
-      })
+        context('when userB deposits 30 assets', async () => {
+          const amount = fp(30)
 
-      const userAShares = fp(100)
-      const userBShares = amount.mul(fp(1)).div(fp(2.8)) // 10.714
-      const userCShares = fp(20).mul(fp(1)).div(fp(2.8)) // 7.14
-      checkStatus({
-        totalAssets: fp(330),
-        shareValue: fp(2.8),
-        userAShares,
-        userAAssets: fp(280),
-        userBShares,
-        userBAssets: amount,
-        userCShares,
-        userCAssets: fp(20),
-        totalShares: userAShares.add(userCShares).add(userBShares), // 117.854
-        previousTotalAssets: fp(330),
-      })
-    })
+          before('deposit 30 assets for userB', async () => {
+            await token.connect(userB).approve(erc4626Adapter.address, amount)
+            await erc4626Adapter.connect(userB).deposit(amount, userB.address)
+          })
 
-    context('t3.1', async () => {
-      before('assets duplicate', async () => {
-        const amount = fp(330)
-        await token.mint(erc4626Mock.address, amount)
-      })
+          totalAssets = totalAssets.add(amount) // 330
+          userBAssets = amount // 30
+          userBShares = amount.mul(fp(1)).div(shareValue) // 10.714
+          totalShares = totalShares.add(userBShares) // 117.854
+          previousTotalAssets = totalAssets // 330
 
-      const shareValue = fp(5.32)
-      const userAShares = fp(100)
-      const userBShares = fp(30).mul(fp(1)).div(fp(2.8)) // 10.714
-      const prevUserCShares = fp(20).mul(fp(1)).div(fp(2.8)) // 7.14
-      const userCShares = prevUserCShares.add(fp(33).mul(fp(1)).div(shareValue)) // 13.34
-      checkStatus({
-        totalAssets: fp(660),
-        shareValue,
-        userAShares,
-        userAAssets: fp(532),
-        userBShares,
-        userBAssets: userBShares.mul(shareValue).div(fp(1)), // 57
-        userCShares,
-        userCAssets: userCShares.mul(shareValue).div(fp(1)), // 71
-        totalShares: userAShares.add(userCShares).add(userBShares), // 124.05
-        previousTotalAssets: fp(330),
-      })
-    })
+          checkStatus({
+            totalAssets,
+            shareValue,
+            userAShares,
+            userAAssets,
+            userBShares,
+            userBAssets,
+            userCShares,
+            userCAssets,
+            totalShares,
+            previousTotalAssets,
+          })
 
-    context('t3.2', async () => {
-      const amount = fp(50)
+          context('when assets duplicate', async () => {
+            const amount = fp(330)
 
-      before('user A withdraws 50 shares', async () => {
-        await erc4626Adapter.connect(userA).redeem(amount, userA.address, userA.address)
-      })
+            before('duplicate assets', async () => {
+              await token.mint(erc4626Mock.address, amount)
+            })
 
-      const shareValue = fp(5.32)
-      const userAShares = fp(100).sub(amount) // 50
-      const userBShares = fp(30).mul(fp(1)).div(fp(2.8)) // 10.714
-      const prevUserCShares = fp(20).mul(fp(1)).div(fp(2.8)) // 7.14
-      const userCShares = prevUserCShares.add(fp(33).mul(fp(1)).div(shareValue)) // 13.34
-      checkStatus({
-        totalAssets: fp(394),
-        shareValue,
-        userAShares,
-        userAAssets: fp(266),
-        userBShares,
-        userBAssets: userBShares.mul(shareValue).div(fp(1)), // 57
-        userCShares,
-        userCAssets: userCShares.mul(shareValue).div(fp(1)), // 71
-        totalShares: userAShares.add(userCShares).add(userBShares), // 74.05
-        previousTotalAssets: fp(394),
+            totalAssets = totalAssets.add(amount) // 660
+            shareValue = fp(5.32)
+            userAAssets = calculateUserAssets(userAShares) // 532
+            userBAssets = calculateUserAssets(userBShares) // 57
+            userCShares = userCShares.add(fp(33).mul(fp(1)).div(shareValue)) // 13.34
+            userCAssets = calculateUserAssets(userCShares) // 71
+            ;(totalShares = userAShares.add(userBShares).add(userCShares)), // 124.05
+              checkStatus({
+                totalAssets,
+                shareValue,
+                userAShares,
+                userAAssets,
+                userBShares,
+                userBAssets,
+                userCShares,
+                userCAssets,
+                totalShares,
+                previousTotalAssets,
+              })
+
+            context('when userA withdraws 50 shares', async () => {
+              const amount = fp(50)
+              const assets = amount.mul(shareValue).div(fp(1))
+
+              before('withdraw 50 shares for userA', async () => {
+                await erc4626Adapter.connect(userA).redeem(amount, userA.address, userA.address)
+              })
+
+              totalAssets = totalAssets.sub(assets) // 394
+              userAAssets = userAAssets.sub(assets) // 266
+              userAShares = userAShares.sub(amount) // 50
+              totalShares = totalShares.sub(amount) // 74.05
+              previousTotalAssets = totalAssets // 394
+
+              checkStatus({
+                totalAssets,
+                shareValue,
+                userAShares,
+                userAAssets,
+                userBShares,
+                userBAssets,
+                userCShares,
+                userCAssets,
+                totalShares,
+                previousTotalAssets,
+              })
+            })
+          })
+        })
       })
     })
   })
