@@ -45,14 +45,16 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
      * @param _erc4626 ERC4626 contract reference
      * @param _feePct Fee percentage to be set
      * @param _feeCollector Fee collector to be set
+     * @param owner Address that will own the ERC4626 adapter
      */
-    constructor(IERC4626 _erc4626, uint256 _feePct, address _feeCollector)
+    constructor(IERC4626 _erc4626, uint256 _feePct, address _feeCollector, address owner)
         ERC20(IERC20Metadata(_erc4626.asset()).symbol(), IERC20Metadata(_erc4626.asset()).name())
         ERC4626(IERC20Metadata(_erc4626.asset()))
     {
         erc4626 = _erc4626;
         _setFeePct(_feePct);
         _setFeeCollector(_feeCollector);
+        _transferOwnership(owner);
     }
 
     /**
