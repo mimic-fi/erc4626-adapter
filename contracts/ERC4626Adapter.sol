@@ -137,16 +137,16 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
      * @dev Tells the fees in share value which have not been charged yet
      */
     function _pendingFeesInShareValue() internal view returns (uint256) {
-        uint256 _totalAssets = totalAssets();
+        uint256 currentTotalAssets = totalAssets();
 
         // Note the following contemplates the scenario where there is no gain.
         // Including the case of loss, which might be due to the underlying implementation not working as expected.
-        if (_totalAssets <= previousTotalAssets) return 0;
-        uint256 pendingFees = (_totalAssets - previousTotalAssets).mulUp(feePct);
+        if (currentTotalAssets <= previousTotalAssets) return 0;
+        uint256 pendingFees = (currentTotalAssets - previousTotalAssets).mulUp(feePct);
 
         // Note the following division uses `super.totalSupply` and not `totalSupply` (the overridden implementation).
         // This means the total supply does not contemplate the `pendingFees`.
-        uint256 previousShareValue = (_totalAssets - pendingFees).divDown(super.totalSupply());
+        uint256 previousShareValue = (currentTotalAssets - pendingFees).divDown(super.totalSupply());
 
         return pendingFees.divUp(previousShareValue);
     }
