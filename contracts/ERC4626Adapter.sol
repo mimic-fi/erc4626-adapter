@@ -61,7 +61,7 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
      * @dev Tells the total amount of assets
      */
     function totalAssets() public view override(IERC4626, ERC4626) returns (uint256) {
-        return erc4626.totalAssets();
+        return erc4626.maxWithdraw(address(this));
     }
 
     /**
@@ -142,13 +142,13 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
         // Note the following contemplates the scenario where there is no gain.
         // Including the case of loss, which might be due to the underlying implementation not working as expected.
         if (currentTotalAssets <= previousTotalAssets) return 0;
-        uint256 pendingFees = (currentTotalAssets - previousTotalAssets).mulUp(feePct);
+        uint256 pendingFees = (currentTotalAssets - previousTotalAssets).mulDown(feePct);
 
         // Note the following division uses `super.totalSupply` and not `totalSupply` (the overridden implementation).
         // This means the total supply does not contemplate the `pendingFees`.
-        uint256 previousShareValue = (currentTotalAssets - pendingFees).divDown(super.totalSupply());
+        uint256 previousShareValue = (currentTotalAssets - pendingFees).divUp(super.totalSupply());
 
-        return pendingFees.divUp(previousShareValue);
+        return pendingFees.divDown(previousShareValue);
     }
 
     /**
