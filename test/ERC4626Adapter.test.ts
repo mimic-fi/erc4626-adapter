@@ -46,7 +46,7 @@ describe('ERC4626 Adapter', () => {
         expect(await erc4626Adapter.feeCollector()).to.be.equal(collector.address)
       })
 
-      it('inherits decimals from asset', async function () {
+      it('inherits decimals from asset', async () => {
         expect(await erc4626Adapter.decimals()).to.be.equal(await token.decimals())
       })
     })
@@ -167,55 +167,55 @@ describe('ERC4626 Adapter', () => {
     }) {
       const ERROR = 1e-18
 
-      it('updates total assets correctly', async function () {
+      it('updates total assets correctly', async () => {
         const totalAssets = await erc4626Adapter.totalAssets()
         assertAlmostEqual(totalAssets, status.totalAssets, ERROR)
       })
 
-      it('updates share value correctly', async function () {
+      it('updates share value correctly', async () => {
         const actualShareValue = await erc4626Adapter.convertToAssets(fp(1))
         assertAlmostEqual(actualShareValue, status.shareValue, ERROR)
       })
 
-      it('updates userA shares correctly', async function () {
+      it('updates userA shares correctly', async () => {
         const userShares = await erc4626Adapter.balanceOf(userA.address)
         assertAlmostEqual(userShares, status.userAShares, ERROR)
       })
 
-      it('updates userA assets correctly', async function () {
+      it('updates userA assets correctly', async () => {
         const userShares = await erc4626Adapter.balanceOf(userA.address)
         const actualUserAssets = await erc4626Adapter.convertToAssets(userShares)
         assertAlmostEqual(actualUserAssets, status.userAAssets, ERROR)
       })
 
-      it('updates userB shares correctly', async function () {
+      it('updates userB shares correctly', async () => {
         const userShares = await erc4626Adapter.balanceOf(userB.address)
         assertAlmostEqual(userShares, status.userBShares, ERROR)
       })
 
-      it('updates userB assets correctly', async function () {
+      it('updates userB assets correctly', async () => {
         const userShares = await erc4626Adapter.balanceOf(userB.address)
         const actualUserAssets = await erc4626Adapter.convertToAssets(userShares)
         assertAlmostEqual(actualUserAssets, status.userBAssets, ERROR)
       })
 
-      it('updates userC shares correctly', async function () {
+      it('updates userC shares correctly', async () => {
         const userShares = await erc4626Adapter.balanceOf(userC.address)
         assertAlmostEqual(userShares, status.userCShares, ERROR)
       })
 
-      it('updates userC assets correctly', async function () {
+      it('updates userC assets correctly', async () => {
         const userShares = await erc4626Adapter.balanceOf(userC.address)
         const actualUserAssets = await erc4626Adapter.convertToAssets(userShares)
         assertAlmostEqual(actualUserAssets, status.userCAssets, ERROR)
       })
 
-      it('updates total shares correctly', async function () {
+      it('updates total shares correctly', async () => {
         const actualTotalShares = await erc4626Adapter.totalSupply()
         assertAlmostEqual(actualTotalShares, status.totalShares, ERROR)
       })
 
-      it('updates previous total assets correctly', async function () {
+      it('updates previous total assets correctly', async () => {
         const actualPreviousTotalAssets = await erc4626Adapter.previousTotalAssets()
         assertAlmostEqual(actualPreviousTotalAssets, status.previousTotalAssets, ERROR)
       })
@@ -425,7 +425,7 @@ describe('ERC4626 Adapter', () => {
           context('when userA withdraws the assets left', async () => {
             const amount = maxWithdrawAmount
 
-            it('lets users withdraw all their assets left', async function () {
+            it('lets users withdraw all their assets left', async () => {
               const previousBalance = await token.balanceOf(userA.address)
 
               await erc4626Adapter.connect(userA).withdraw(amount, userA.address, userA.address)
@@ -437,7 +437,7 @@ describe('ERC4626 Adapter', () => {
                 .reverted
             })
 
-            it(`${fee ? 'charges a fee' : 'does not charge any fee'}`, async function () {
+            it(`${fee ? 'charges a fee' : 'does not charge any fee'}`, async () => {
               const tx = await erc4626Adapter.connect(userA).withdraw(amount, userA.address, userA.address)
 
               await assertEvent(tx, 'FeesSettled', { collector: userC.address, amount: fee })
@@ -484,7 +484,7 @@ describe('ERC4626 Adapter', () => {
           await erc4626Mock.burn(erc4626Adapter.address, amount)
         })
 
-        it('lets users withdraw all their assets', async function () {
+        it('lets users withdraw all their assets', async () => {
           const amount = fp(279.99) // because of rounding when charging fees
           const previousBalance = await token.balanceOf(userA.address)
 
@@ -496,7 +496,7 @@ describe('ERC4626 Adapter', () => {
           await expect(erc4626Adapter.connect(userB).withdraw(amount, userB.address, userB.address)).not.to.be.reverted
         })
 
-        it('charges a fee', async function () {
+        it('charges a fee', async () => {
           const amount = fp(279.99) // because of rounding when charging fees
           const feeAmount = bn('14285714285714285713') // 14 shares = 40 assets
 

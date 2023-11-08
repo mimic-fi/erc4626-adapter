@@ -11,12 +11,12 @@ contract TokenMock is ERC20 {
         _decimals = dec;
     }
 
-    function mint(address account, uint256 amount) external {
-        _mint(account, amount);
-    }
-
     function decimals() public view override returns (uint8) {
         return _decimals;
+    }
+
+    function mint(address account, uint256 amount) external {
+        _mint(account, amount);
     }
 
     function burn(address account, uint256 amount) external {
