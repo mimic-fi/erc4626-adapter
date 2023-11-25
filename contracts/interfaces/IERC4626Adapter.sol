@@ -21,6 +21,26 @@ import '@openzeppelin/contracts/interfaces/IERC4626.sol';
  */
 interface IERC4626Adapter is IERC4626 {
     /**
+     * @dev The token is zero
+     */
+    error TokenZero();
+
+    /**
+     * @dev The token is the underlying ERC4626
+     */
+    error TokenERC4626();
+
+    /**
+     * @dev The recipient is zero
+     */
+    error RecipientZero();
+
+    /**
+     * @dev The amount is zero
+     */
+    error AmountZero();
+
+    /**
      * @dev The requested percentage to be set is zero
      */
     error FeePctZero();
@@ -48,12 +68,17 @@ interface IERC4626Adapter is IERC4626 {
     /**
      * @dev Emitted every time the fee collector is set
      */
-    event FeeCollectorSet(address collector);
+    event FeeCollectorSet(address indexed collector);
 
     /**
      * @dev Emitted every time fees are settled
      */
-    event FeesSettled(address collector, uint256 amount);
+    event FeesSettled(address indexed collector, uint256 amount);
+
+    /**
+     * @dev Emitted every time some ERC20 tokens are withdrawn from the adapter to an external account
+     */
+    event FundsRescued(address indexed token, address indexed recipient, uint256 amount);
 
     /**
      * @dev Tells the reference to the ERC4626 contract
@@ -86,4 +111,12 @@ interface IERC4626Adapter is IERC4626 {
      * @param collector Fee collector to be set
      */
     function setFeeCollector(address collector) external;
+
+    /**
+     * @dev Withdraw ERC20 tokens to an external account. To be used in order to withdraw claimed protocol rewards.
+     * @param token Address of the token to be withdrawn
+     * @param recipient Address where the tokens will be transferred to
+     * @param amount Amount of tokens to withdraw
+     */
+    function rescueFunds(address token, address recipient, uint256 amount) external;
 }
