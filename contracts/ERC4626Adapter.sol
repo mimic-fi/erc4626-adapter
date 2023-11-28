@@ -15,11 +15,10 @@
 pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol';
 
 import '@mimic-fi/v3-helpers/contracts/math/FixedPoint.sol';
+import '@mimic-fi/v3-helpers/contracts/utils/ERC20Helpers.sol';
 
 import './interfaces/IERC4626Adapter.sol';
 
@@ -29,7 +28,6 @@ import './interfaces/IERC4626Adapter.sol';
  */
 contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
     using FixedPoint for uint256;
-    using SafeERC20 for IERC20;
 
     // Reference to the ERC4626 contract
     IERC4626 public immutable override erc4626;
@@ -104,12 +102,12 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
      * @param amount Amount of tokens to withdraw
      */
     function rescueFunds(address token, address recipient, uint256 amount) external override onlyOwner {
-        if (token == address(0)) revert TokenZero();
-        if (token == address(erc4626)) revert TokenERC4626();
-        if (recipient == address(0)) revert RecipientZero();
-        if (amount == 0) revert AmountZero();
+        if (token == address(0)) revert ERC4626AdapterTokenZero();
+        if (token == address(erc4626)) revert ERC4626AdapterTokenERC4626();
+        if (recipient == address(0)) revert ERC4626AdapterRecipientZero();
+        if (amount == 0) revert ERC4626AdapterAmountZero();
 
-        IERC20(token).safeTransfer(recipient, amount);
+        ERC20Helpers.transfer(token, recipient, amount);
         emit FundsRescued(token, recipient, amount);
     }
 
@@ -184,12 +182,12 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
      * @param newFeePct Fee percentage to be set
      */
     function _setFeePct(uint256 newFeePct) internal {
-        if (newFeePct == 0) revert FeePctZero();
+        if (newFeePct == 0) revert ERC4626AdapterFeePctZero();
 
         if (feePct == 0) {
-            if (newFeePct >= FixedPoint.ONE) revert FeePctAboveOne();
+            if (newFeePct >= FixedPoint.ONE) revert ERC4626AdapterFeePctAboveOne();
         } else {
-            if (newFeePct >= feePct) revert FeePctAbovePrevious(newFeePct, feePct);
+            if (newFeePct >= feePct) revert ERC4626AdapterFeePctAbovePrevious(newFeePct, feePct);
         }
 
         feePct = newFeePct;
@@ -201,7 +199,7 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
      * @param newFeeCollector Fee collector to be set
      */
     function _setFeeCollector(address newFeeCollector) internal {
-        if (newFeeCollector == address(0)) revert FeeCollectorZero();
+        if (newFeeCollector == address(0)) revert ERC4626AdapterFeeCollectorZero();
         feeCollector = newFeeCollector;
         emit FeeCollectorSet(newFeeCollector);
     }

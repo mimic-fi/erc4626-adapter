@@ -14,6 +14,8 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect } from 'chai'
 import { BigNumber, BigNumberish, Contract } from 'ethers'
 
+/* eslint-disable no-secrets/no-secrets */
+
 describe('ERC4626 Adapter', () => {
   let token: Contract, erc4626Mock: Contract, erc4626Adapter: Contract
   let owner: SignerWithAddress, other: SignerWithAddress, collector: SignerWithAddress
@@ -59,7 +61,7 @@ describe('ERC4626 Adapter', () => {
       it('reverts', async () => {
         await expect(
           deploy('ERC4626Adapter', [erc4626Mock.address, newFeePct, ZERO_ADDRESS, ZERO_ADDRESS])
-        ).to.be.revertedWith('FeePctAboveOne')
+        ).to.be.revertedWith('ERC4626AdapterFeePctAboveOne')
       })
     })
   })
@@ -127,7 +129,7 @@ describe('ERC4626 Adapter', () => {
           const newFeePct = 0
 
           it('reverts', async () => {
-            await expect(erc4626Adapter.setFeePct(newFeePct)).to.be.revertedWith('FeePctZero')
+            await expect(erc4626Adapter.setFeePct(newFeePct)).to.be.revertedWith('ERC4626AdapterFeePctZero')
           })
         })
       })
@@ -136,7 +138,7 @@ describe('ERC4626 Adapter', () => {
         const newFeePct = fee.add(1)
 
         it('reverts', async () => {
-          await expect(erc4626Adapter.setFeePct(newFeePct)).to.be.revertedWith('FeePctAbovePrevious')
+          await expect(erc4626Adapter.setFeePct(newFeePct)).to.be.revertedWith('ERC4626AdapterFeePctAbovePrevious')
         })
       })
     })
@@ -220,7 +222,7 @@ describe('ERC4626 Adapter', () => {
 
                 it('reverts', async () => {
                   await expect(erc4626Adapter.rescueFunds(token, recipient.address, amount)).to.be.revertedWith(
-                    'Address: call to non-contract'
+                    'Address: insufficient balance'
                   )
                 })
               })
@@ -231,7 +233,7 @@ describe('ERC4626 Adapter', () => {
 
               it('reverts', async () => {
                 await expect(erc4626Adapter.rescueFunds(token.address, recipient.address, amount)).to.be.revertedWith(
-                  'AmountZero'
+                  'ERC4626AdapterAmountZero'
                 )
               })
             })
@@ -242,7 +244,7 @@ describe('ERC4626 Adapter', () => {
 
             it('reverts', async () => {
               await expect(erc4626Adapter.rescueFunds(token.address, recipientAddr, amount)).to.be.revertedWith(
-                'RecipientZero'
+                'ERC4626AdapterRecipientZero'
               )
             })
           })
@@ -257,17 +259,19 @@ describe('ERC4626 Adapter', () => {
 
           it('reverts', async () => {
             await expect(erc4626Adapter.rescueFunds(token, recipient.address, amount)).to.be.revertedWith(
-              'TokenERC4626'
+              'ERC4626AdapterTokenERC4626'
             )
           })
         })
       })
 
       context('when the token is the zero address', () => {
-        const tokenAddr = ZERO_ADDRESS
+        const token = ZERO_ADDRESS
 
         it('reverts', async () => {
-          await expect(erc4626Adapter.rescueFunds(tokenAddr, recipient.address, amount)).to.be.revertedWith('TokenZero')
+          await expect(erc4626Adapter.rescueFunds(token, recipient.address, amount)).to.be.revertedWith(
+            'ERC4626AdapterTokenZero'
+          )
         })
       })
     })

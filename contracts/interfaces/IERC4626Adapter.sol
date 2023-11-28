@@ -23,42 +23,42 @@ interface IERC4626Adapter is IERC4626 {
     /**
      * @dev The token is zero
      */
-    error TokenZero();
+    error ERC4626AdapterTokenZero();
 
     /**
      * @dev The token is the underlying ERC4626
      */
-    error TokenERC4626();
+    error ERC4626AdapterTokenERC4626();
 
     /**
      * @dev The recipient is zero
      */
-    error RecipientZero();
+    error ERC4626AdapterRecipientZero();
 
     /**
      * @dev The amount is zero
      */
-    error AmountZero();
+    error ERC4626AdapterAmountZero();
 
     /**
      * @dev The requested percentage to be set is zero
      */
-    error FeePctZero();
+    error ERC4626AdapterFeePctZero();
 
     /**
      * @dev The requested collector to be set is zero
      */
-    error FeeCollectorZero();
+    error ERC4626AdapterFeeCollectorZero();
 
     /**
      * @dev The requested percentage to be set is above one
      */
-    error FeePctAboveOne();
+    error ERC4626AdapterFeePctAboveOne();
 
     /**
      * @dev The requested percentage to be set is above the previous percentage set
      */
-    error FeePctAbovePrevious(uint256 requestedPct, uint256 previousPct);
+    error ERC4626AdapterFeePctAbovePrevious(uint256 requestedPct, uint256 previousPct);
 
     /**
      * @dev Emitted every time the fee percentage is set
