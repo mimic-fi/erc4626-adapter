@@ -16,6 +16,8 @@ pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
 import '@mimic-fi/v3-helpers/contracts/math/FixedPoint.sol';
 import '@mimic-fi/v3-helpers/contracts/utils/ERC20Helpers.sol';
@@ -26,7 +28,7 @@ import './interfaces/IERC4626Adapter.sol';
  * @title ERC4626 adapter
  * @dev Adapter used to track the accounting of investments made through ERC4626 implementations
  */
-contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
+contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, Initializable, ReentrancyGuardUpgradeable {
     using FixedPoint for uint256;
 
     // Reference to the ERC4626 contract
@@ -56,13 +58,96 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
         _setFeePct(_feePct);
         _setFeeCollector(_feeCollector);
         _transferOwnership(owner);
+        _disableInitializers();
+    }
+
+    /**
+     * @dev Initializes the ERC4626 adapter
+     */
+    function initialize() external virtual initializer {
+        __ReentrancyGuard_init();
     }
 
     /**
      * @dev Tells the total amount of assets
      */
     function totalAssets() public view override(IERC4626, ERC4626) returns (uint256) {
-        return erc4626.maxWithdraw(address(this));
+        return erc4626.convertToAssets(erc4626.balanceOf(address(this)));
+    }
+
+    /**
+     * @dev Tells the maximum amount of assets that can be withdrawn from an owner balance
+     */
+    function maxWithdraw(address owner) public view virtual override(IERC4626, ERC4626) returns (uint256) {
+        return Math.min(super.maxWithdraw(owner), erc4626.maxWithdraw(address(this)));
+    }
+
+    /**
+     * @dev Tells the maximum amount of shares that can be redeemed from an owner balance
+     */
+    function maxRedeem(address owner) public view virtual override(IERC4626, ERC4626) returns (uint256) {
+        return _convertToShares(maxWithdraw(owner), Math.Rounding.Down);
+    }
+
+    /**
+     * @dev Deposits assets
+     * @param assets Amount of assets to be deposited
+     * @param receiver Address that will receive the shares
+     *
+     * Note: overrides the standard in order to add the `nonReentrant` modifier
+     */
+    function deposit(uint256 assets, address receiver)
+        public
+        override(IERC4626, ERC4626)
+        nonReentrant
+        returns (uint256)
+    {
+        return super.deposit(assets, receiver);
+    }
+
+    /**
+     * @dev Mints shares
+     * @param shares Amount of shares to be minted
+     * @param receiver Address that will receive the shares
+     *
+     * Note: overrides the standard in order to add the `nonReentrant` modifier
+     */
+    function mint(uint256 shares, address receiver) public override(IERC4626, ERC4626) nonReentrant returns (uint256) {
+        return super.mint(shares, receiver);
+    }
+
+    /**
+     * @dev Withdraws assets
+     * @param assets Amount of assets to be withdrawn
+     * @param receiver Address that will receive the assets
+     * @param owner Address that owns the shares
+     *
+     * Note: overrides the standard in order to add the `nonReentrant` modifier
+     */
+    function withdraw(uint256 assets, address receiver, address owner)
+        public
+        override(IERC4626, ERC4626)
+        nonReentrant
+        returns (uint256)
+    {
+        return super.withdraw(assets, receiver, owner);
+    }
+
+    /**
+     * @dev Redeems shares
+     * @param shares Amount of shares to be redeemed
+     * @param receiver Address that will receive the assets
+     * @param owner Address that owns the shares
+     *
+     * Note: overrides the standard in order to add the `nonReentrant` modifier
+     */
+    function redeem(uint256 shares, address receiver, address owner)
+        public
+        override(IERC4626, ERC4626)
+        nonReentrant
+        returns (uint256)
+    {
+        return super.redeem(shares, receiver, owner);
     }
 
     /**
@@ -84,6 +169,9 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
      * @param pct Fee percentage to be set
      */
     function setFeePct(uint256 pct) external override onlyOwner {
+        _settleFees();
+        previousTotalAssets = totalAssets();
+
         _setFeePct(pct);
     }
 
@@ -92,6 +180,9 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
      * @param collector Fee collector to be set
      */
     function setFeeCollector(address collector) external override onlyOwner {
+        _settleFees();
+        previousTotalAssets = totalAssets();
+
         _setFeeCollector(collector);
     }
 
@@ -135,7 +226,7 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
      * @param receiver Address that will receive the assets
      * @param owner Address that owns the shares
      * @param assets Amount of assets to be withdrawn
-     * @param shares Amount of shares to be burnt
+     * @param shares Amount of shares to be redeemed
      */
     function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
         internal
@@ -173,6 +264,7 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable {
      */
     function _settleFees() internal {
         uint256 feeAmount = _pendingFeesInShareValue();
+        if (feeAmount == 0) return;
         _mint(feeCollector, feeAmount);
         emit FeesSettled(feeCollector, feeAmount);
     }
