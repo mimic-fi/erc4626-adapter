@@ -16,8 +16,7 @@ pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol';
-import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 
 import '@mimic-fi/v3-helpers/contracts/math/FixedPoint.sol';
 import '@mimic-fi/v3-helpers/contracts/utils/ERC20Helpers.sol';
@@ -28,7 +27,7 @@ import './interfaces/IERC4626Adapter.sol';
  * @title ERC4626 adapter
  * @dev Adapter used to track the accounting of investments made through ERC4626 implementations
  */
-contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, Initializable, ReentrancyGuardUpgradeable {
+contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
     using FixedPoint for uint256;
 
     // Reference to the ERC4626 contract
@@ -58,14 +57,6 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, Initializable, Ree
         _setFeePct(_feePct);
         _setFeeCollector(_feeCollector);
         _transferOwnership(owner);
-        _disableInitializers();
-    }
-
-    /**
-     * @dev Initializes the ERC4626 adapter
-     */
-    function initialize() external virtual initializer {
-        __ReentrancyGuard_init();
     }
 
     /**

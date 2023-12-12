@@ -58,10 +58,6 @@ describe('ERC4626 Adapter', () => {
       it('sets the owner correctly', async () => {
         expect(await erc4626Adapter.owner()).to.be.equal(owner.address)
       })
-
-      it('cannot be initialized twice', async () => {
-        await expect(erc4626Adapter.initialize()).to.be.revertedWith('Initializable: contract is already initialized')
-      })
     })
 
     context('when the fee percentage is above 1', () => {
