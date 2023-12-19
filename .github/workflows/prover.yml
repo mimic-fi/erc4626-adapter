@@ -18,6 +18,5 @@ jobs:
       - name: Prove
         uses: ./.github/actions/certora
         with:
-          workspace: '@erc4626-adapter'
           certora-key: ${{ secrets.CERTORA_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
