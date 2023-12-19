@@ -5,14 +5,14 @@ using ERC20 as __ERC20;
 
 use invariant totalAssetsZeroImpliesTotalSupplyZero;
 use invariant sumOfBalancesEqualsTotalSupplyERC20;
-use invariant sumOfBalancesEqualsTotalSupplyERC4626;
 use invariant sumOfBalancesEqualsTotalSupplyERC4626Adapter;
+use invariant sumOfBalancesEqualsTotalSupplyERC4626Underlying;
 use invariant singleUserBalanceSmallerThanTotalSupplyERC20;
-use invariant singleUserBalanceSmallerThanTotalSupplyERC4626;
 use invariant singleUserBalanceSmallerThanTotalSupplyERC4626Adapter;
+use invariant singleUserBalanceSmallerThanTotalSupplyERC4626Underlying;
 use invariant mirrorIsCorrectERC20;
-use invariant mirrorIsCorrectERC4626;
 use invariant mirrorIsCorrectERC4626Adapter;
+use invariant mirrorIsCorrectERC4626Underlying;
 
 methods {
     function allowance(address, address) external returns uint256 envfree;

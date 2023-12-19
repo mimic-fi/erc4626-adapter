@@ -6,14 +6,14 @@ using ERC20 as __ERC20;
 //This is counter-intuitive: why we need to import invariants that should be loaded when calling safeAssumptions()? 
 use invariant totalAssetsZeroImpliesTotalSupplyZero;
 use invariant sumOfBalancesEqualsTotalSupplyERC20;
-use invariant sumOfBalancesEqualsTotalSupplyERC4626;
 use invariant sumOfBalancesEqualsTotalSupplyERC4626Adapter;
+use invariant sumOfBalancesEqualsTotalSupplyERC4626Underlying;
 use invariant singleUserBalanceSmallerThanTotalSupplyERC20;
-use invariant singleUserBalanceSmallerThanTotalSupplyERC4626;
 use invariant singleUserBalanceSmallerThanTotalSupplyERC4626Adapter;
+use invariant singleUserBalanceSmallerThanTotalSupplyERC4626Underlying;
 use invariant mirrorIsCorrectERC20;
-use invariant mirrorIsCorrectERC4626;
 use invariant mirrorIsCorrectERC4626Adapter;
+use invariant mirrorIsCorrectERC4626Underlying;
 
 methods {
     function balanceOf(address) external returns uint256 envfree;
