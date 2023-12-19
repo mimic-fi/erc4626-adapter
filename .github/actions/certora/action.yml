@@ -2,9 +2,6 @@ name: Certora Prover
 description: Run Certora Prover
 
 inputs:
-  workspace:
-    description: Yarn workspace to run prove script
-    required: true
   certora-key:
     description: Certora key
     required: true
@@ -39,7 +36,7 @@ runs:
       id: 'certora'
       shell: bash
       run: |
-        if CERTORA_OUTPUT=$(yarn --silent workspace ${{ inputs.workspace }} run --silent prove:ci); then
+        if CERTORA_OUTPUT=$(yarn --silent run --silent prove:ci); then
           echo "$CERTORA_OUTPUT"
           echo "CERTORA_JOB=$(echo "$CERTORA_OUTPUT" | tail -n 1)" >> $GITHUB_OUTPUT
         else
