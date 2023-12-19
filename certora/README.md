@@ -9,7 +9,7 @@ The rules inside this directory were created from the ones in [this repository](
 5. [RoundingProps](https://prover.certora.com/output/30349/d183a8ebf57f46339a87c5decc649427/?anonymousKey=8ba4738a387cd345ff2d8a1c1c67df54b848f1a9)
 6. [SecurityProps](https://prover.certora.com/output/30349/c8a1bf79ae3c4bc38cb21fd1d3f53fb4/?anonymousKey=444d2d568fbe044b2c7939dc3164090cbb1e1a81)
 
-The rules inside this directory are divided into `zero-fees` and `with-fees`.
+The modified rules for the ERC4626Adapter inside this directory are divided into `zero-fees` and `with-fees`.
 
 ### Zero fees
 

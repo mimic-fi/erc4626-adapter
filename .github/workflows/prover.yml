@@ -18,6 +18,6 @@ jobs:
       - name: Prove
         uses: ./.github/actions/certora
         with:
-          workspace: '@mimic-fi/erc4626-adapter'
+          workspace: '@erc4626-adapter'
           certora-key: ${{ secrets.CERTORA_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
