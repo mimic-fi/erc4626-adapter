@@ -12,13 +12,25 @@
     "!contracts/test/*"
   ],
   "scripts": {
+    "prepare": "yarn build",
     "build": "yarn compile",
     "compile": "hardhat compile",
     "lint": "yarn lint:solidity && yarn lint:typescript",
     "lint:solidity": "solhint 'contracts/**/*.sol' --config ./node_modules/solhint-config-mimic/index.js",
     "lint:typescript": "eslint . --ext .ts",
     "test": "hardhat test",
-    "prepare": "yarn build"
+    "prove": "yarn prove:with-fees && yarn prove:zero-fees",
+    "prove:ci": "yarn prove --solc solc8.17",
+    "prove:with-fees": "yarn prove:with-fees-functional-accounting-props",
+    "prove:zero-fees": "yarn prove:zero-fees-functional-accounting-props && yarn prove:zero-fees-must-not-revert-props && yarn prove:zero-fees-redeem-using-approval-props && yarn prove:zero-fees-rounding-props && yarn prove:zero-fees-security-props",
+    "prove:with-fees-functional-accounting-props": "certoraRun certora/conf/with-fees/with-fees-functional-accounting-props.conf",
+    "prove:with-fees-monotonicity-invariant": "certoraRun certora/conf/with-fees/with-fees-monotonicity-invariant.conf",
+    "prove:zero-fees-functional-accounting-props": "certoraRun certora/conf/zero-fees/zero-fees-functional-accounting-props.conf",
+    "prove:zero-fees-monotonicity-invariant": "certoraRun certora/conf/zero-fees/zero-fees-monotonicity-invariant.conf",
+    "prove:zero-fees-must-not-revert-props": "certoraRun certora/conf/zero-fees/zero-fees-must-not-revert-props.conf",
+    "prove:zero-fees-redeem-using-approval-props": "certoraRun certora/conf/zero-fees/zero-fees-redeem-using-approval-props.conf",
+    "prove:zero-fees-rounding-props": "certoraRun certora/conf/zero-fees/zero-fees-rounding-props.conf",
+    "prove:zero-fees-security-props": "certoraRun certora/conf/zero-fees/zero-fees-security-props.conf"
   },
   "dependencies": {
     "@mimic-fi/v3-helpers": "0.1.0",
