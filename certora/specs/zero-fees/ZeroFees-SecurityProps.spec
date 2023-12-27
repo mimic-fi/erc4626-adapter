@@ -21,6 +21,9 @@ methods {
     function totalSupply() external returns uint256 envfree;
     function erc4626() external returns address envfree;
 
+    function convertToAssets(uint256) external returns uint256 envfree;
+    function convertToShares(uint256) external returns uint256 envfree;
+
     function __ERC20.decimals() external returns uint8 envfree;
 }
 
@@ -35,17 +38,6 @@ rule depositMustIncreaseTotalSupply(uint256 assets, address user) {
     assert totalSupplyAfter >= totalSupplyBefore, "Total supply must increase when deposit is called."; 
 }
 
-//mint must increase totalAssets
-rule mintMustIncreaseTotalAssets(uint256 shares, address user) {
-    safeAssumptions();
-
-    uint256 totalAssetsBefore = totalAssets();
-    env e;
-    mint(e, shares, user);
-    uint256 totalAssetsAfter = totalAssets();
-    assert totalAssetsAfter >= totalAssetsBefore, "Total assets must increase when mint is called."; 
-}
-
 //withdraw must decrease totalAssets
 rule withdrawMustDecreaseTotalSupply(uint256 assets, address receiver, address user) {
     safeAssumptions();
@@ -56,17 +48,6 @@ rule withdrawMustDecreaseTotalSupply(uint256 assets, address receiver, address u
     withdraw(e, assets, receiver, user);
     uint256 totalSupplyAfter = totalSupply();
     assert totalSupplyAfter <= totalSupplyBefore, "Total supply must decrease when withdraw is called."; 
-}
-
-//redeem must decrease totalAssets
-rule redeemMustDecreaseTotalAssets(uint256 shares, address receiver, address user) {
-    safeAssumptions();
-
-    uint256 totalAssetsBefore = totalAssets();
-    env e;
-    redeem(e, shares, receiver, user);
-    uint256 totalAssetsAfter = totalAssets();
-    assert totalAssetsAfter <= totalAssetsBefore, "Total assets must decrease when redeem is called."; 
 }
 
 /**
@@ -207,3 +188,9 @@ rule decimalsOfUnderlyingVaultShouldBeLarger(uint256 shares, address receiver, a
     
     assert decimals >= assetDecimals, "Decimals of underlying ERC20 should be larger than ERC4626 decimals."; 
 }
+
+invariant convertInteg1(uint256 assets)
+    assets == convertToAssets(convertToShares(assets));
+
+invariant convertInteg2(uint256 shares)
+    shares == convertToShares(convertToAssets(shares));

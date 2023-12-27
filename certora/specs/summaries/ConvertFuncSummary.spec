@@ -13,7 +13,9 @@ This is a simplification but capture the essense of shares to assets:
 */
 
 function convertToShares_summary(uint256 assets, Math.Rounding rounding) returns uint256 {
-    //uint256 supply = totalSupply(); 
+    if (totalSupply() == 0) {
+        return 0;
+    }
     // todo - need to handle zero case, maybe also changing ratio ? 
     if (rounding == Math.Rounding.Down) {
         return  require_uint256(assets * 3 / 5);
@@ -26,7 +28,9 @@ function convertToShares_summary(uint256 assets, Math.Rounding rounding) returns
 }
 
 function convertToAssets_summary(uint256 shares, Math.Rounding rounding) returns uint256 {
-    //uint256 supply = totalSupply(); 
+    if (totalSupply() == 0) {
+        return 0;
+    }
     if (rounding == Math.Rounding.Down) {
         return  require_uint256(shares * 5 / 3);
     } else if (rounding == Math.Rounding.Up) {
