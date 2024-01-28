@@ -67,6 +67,20 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
     }
 
     /**
+     * @dev Tells the total amount of shares
+     */
+    function totalSupply() public view override(IERC20, ERC20) returns (uint256) {
+        return super.totalSupply() + pendingFeesInShares();
+    }
+
+    /**
+     * @dev Tells the amount of shares of an owner
+     */
+    function balanceOf(address owner) public view override(IERC20, ERC20) returns (uint256) {
+        return super.balanceOf(owner) + (owner == feeCollector ? pendingFeesInShares() : 0);
+    }
+
+    /**
      * @dev Tells the maximum amount of assets that can be withdrawn from an owner balance
      */
     function maxWithdraw(address owner) public view virtual override(IERC4626, ERC4626) returns (uint256) {
@@ -78,6 +92,24 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
      */
     function maxRedeem(address owner) public view virtual override(IERC4626, ERC4626) returns (uint256) {
         return _convertToShares(maxWithdraw(owner), Math.Rounding.Down);
+    }
+
+    /**
+     * @dev Tells the fees in share value which have not been charged yet
+     */
+    function pendingFeesInShares() public view returns (uint256) {
+        uint256 currentTotalAssets = totalAssets();
+
+        // Note the following contemplates the scenario where there is no gain.
+        // Including the case of loss, which might be due to the underlying implementation not working as expected.
+        if (currentTotalAssets <= previousTotalAssets) return 0;
+        uint256 pendingFees = (currentTotalAssets - previousTotalAssets).mulDown(feePct);
+
+        // Note the following division uses `super.totalSupply` and not `totalSupply` (the overridden implementation).
+        // This means the total supply does not contemplate the `pendingFees`.
+        uint256 previousShareValue = (currentTotalAssets - pendingFees).divUp(super.totalSupply());
+
+        return pendingFees.divDown(previousShareValue);
     }
 
     /**
@@ -142,28 +174,13 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Tells the total amount of shares
-     */
-    function totalSupply() public view override(IERC20, ERC20) returns (uint256) {
-        return super.totalSupply() + _pendingFeesInShareValue();
-    }
-
-    /**
-     * @dev Tells the amount of shares of an account
-     */
-    function balanceOf(address account) public view override(IERC20, ERC20) returns (uint256) {
-        return super.balanceOf(account) + (account == feeCollector ? _pendingFeesInShareValue() : 0);
-    }
-
-    /**
      * @dev Sets the fee percentage
      * @param pct Fee percentage to be set
      */
     function setFeePct(uint256 pct) external override onlyOwner {
         _settleFees();
-        previousTotalAssets = totalAssets();
-
         _setFeePct(pct);
+        previousTotalAssets = totalAssets();
     }
 
     /**
@@ -172,9 +189,8 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
      */
     function setFeeCollector(address collector) external override onlyOwner {
         _settleFees();
-        previousTotalAssets = totalAssets();
-
         _setFeeCollector(collector);
+        previousTotalAssets = totalAssets();
     }
 
     /**
@@ -204,7 +220,6 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
         _settleFees();
 
         super._deposit(caller, receiver, assets, shares);
-
         IERC20(erc4626.asset()).approve(address(erc4626), assets);
         erc4626.deposit(assets, address(this));
 
@@ -226,35 +241,16 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
         _settleFees();
 
         erc4626.withdraw(assets, address(this), address(this));
-
         super._withdraw(caller, receiver, owner, assets, shares);
 
         previousTotalAssets = totalAssets();
     }
 
     /**
-     * @dev Tells the fees in share value which have not been charged yet
-     */
-    function _pendingFeesInShareValue() internal view returns (uint256) {
-        uint256 currentTotalAssets = totalAssets();
-
-        // Note the following contemplates the scenario where there is no gain.
-        // Including the case of loss, which might be due to the underlying implementation not working as expected.
-        if (currentTotalAssets <= previousTotalAssets) return 0;
-        uint256 pendingFees = (currentTotalAssets - previousTotalAssets).mulDown(feePct);
-
-        // Note the following division uses `super.totalSupply` and not `totalSupply` (the overridden implementation).
-        // This means the total supply does not contemplate the `pendingFees`.
-        uint256 previousShareValue = (currentTotalAssets - pendingFees).divUp(super.totalSupply());
-
-        return pendingFees.divDown(previousShareValue);
-    }
-
-    /**
      * @dev Settles the fees which have not been charged yet
      */
     function _settleFees() internal {
-        uint256 feeAmount = _pendingFeesInShareValue();
+        uint256 feeAmount = pendingFeesInShares();
         if (feeAmount == 0) return;
         _mint(feeCollector, feeAmount);
         emit FeesSettled(feeCollector, feeAmount);
