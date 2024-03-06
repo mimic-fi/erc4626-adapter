@@ -74,24 +74,24 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Tells the amount of shares of an owner
+     * @dev Tells the amount of shares of an account
      */
-    function balanceOf(address owner) public view override(IERC20, ERC20) returns (uint256) {
-        return super.balanceOf(owner) + (owner == feeCollector ? pendingFeesInShares() : 0);
+    function balanceOf(address account) public view override(IERC20, ERC20) returns (uint256) {
+        return super.balanceOf(account) + (account == feeCollector ? pendingFeesInShares() : 0);
     }
 
     /**
-     * @dev Tells the maximum amount of assets that can be withdrawn from an owner balance
+     * @dev Tells the maximum amount of assets that can be withdrawn from an account balance
      */
-    function maxWithdraw(address owner) public view virtual override(IERC4626, ERC4626) returns (uint256) {
-        return Math.min(super.maxWithdraw(owner), erc4626.maxWithdraw(address(this)));
+    function maxWithdraw(address account) public view virtual override(IERC4626, ERC4626) returns (uint256) {
+        return Math.min(super.maxWithdraw(account), erc4626.maxWithdraw(address(this)));
     }
 
     /**
-     * @dev Tells the maximum amount of shares that can be redeemed from an owner balance
+     * @dev Tells the maximum amount of shares that can be redeemed from an account balance
      */
-    function maxRedeem(address owner) public view virtual override(IERC4626, ERC4626) returns (uint256) {
-        return _convertToShares(maxWithdraw(owner), Math.Rounding.Down);
+    function maxRedeem(address account) public view virtual override(IERC4626, ERC4626) returns (uint256) {
+        return _convertToShares(maxWithdraw(account), Math.Rounding.Down);
     }
 
     /**
@@ -143,34 +143,34 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
      * @dev Withdraws assets
      * @param assets Amount of assets to be withdrawn
      * @param receiver Address that will receive the assets
-     * @param owner Address that owns the shares
+     * @param account Address of the account that owns the shares
      *
      * Note: overrides the standard in order to add the `nonReentrant` modifier
      */
-    function withdraw(uint256 assets, address receiver, address owner)
+    function withdraw(uint256 assets, address receiver, address account)
         public
         override(IERC4626, ERC4626)
         nonReentrant
         returns (uint256)
     {
-        return super.withdraw(assets, receiver, owner);
+        return super.withdraw(assets, receiver, account);
     }
 
     /**
      * @dev Redeems shares
      * @param shares Amount of shares to be redeemed
      * @param receiver Address that will receive the assets
-     * @param owner Address that owns the shares
+     * @param account Address of the account that owns the shares
      *
      * Note: overrides the standard in order to add the `nonReentrant` modifier
      */
-    function redeem(uint256 shares, address receiver, address owner)
+    function redeem(uint256 shares, address receiver, address account)
         public
         override(IERC4626, ERC4626)
         nonReentrant
         returns (uint256)
     {
-        return super.redeem(shares, receiver, owner);
+        return super.redeem(shares, receiver, account);
     }
 
     /**
@@ -230,18 +230,18 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
      * @dev Withdraws assets from an ERC4626 through the adapter
      * @param caller Address of the caller
      * @param receiver Address that will receive the assets
-     * @param owner Address that owns the shares
+     * @param account Address of the account that owns the shares
      * @param assets Amount of assets to be withdrawn
      * @param shares Amount of shares to be redeemed
      */
-    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
+    function _withdraw(address caller, address receiver, address account, uint256 assets, uint256 shares)
         internal
         override
     {
         _settleFees();
 
         erc4626.withdraw(assets, address(this), address(this));
-        super._withdraw(caller, receiver, owner, assets, shares);
+        super._withdraw(caller, receiver, account, assets, shares);
 
         previousTotalAssets = totalAssets();
     }

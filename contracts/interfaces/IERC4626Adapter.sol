@@ -101,6 +101,11 @@ interface IERC4626Adapter is IERC4626 {
     function previousTotalAssets() external view returns (uint256);
 
     /**
+     * @dev Tells the fees in share value which have not been charged yet
+     */
+    function pendingFeesInShares() external view returns (uint256);
+
+    /**
      * @dev Sets the fee percentage
      * @param pct Fee percentage to be set
      */
