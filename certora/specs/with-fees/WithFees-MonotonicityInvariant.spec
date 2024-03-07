@@ -13,7 +13,7 @@ methods {
     function previewWithdraw(uint256) external returns uint256 envfree;
     function previewDeposit(uint256) external returns uint256 envfree;
     function previewRedeem(uint256) external returns uint256 envfree;
-    function pendingFeesInShareValue() external returns uint256 envfree;
+    function pendingFeesInShares() external returns uint256 envfree;
     function feeCollector() external returns address envfree;
     function convertToAssets(uint256) external returns uint256 envfree;
  
@@ -116,7 +116,7 @@ hook Sload uint256 value _ERC20._balances[KEY address user] STORAGE {
 }
 
 invariant sumOfBalancesEqualsTotalSupplyERC4626Adapter()
-    sumOfBalancesERC4626Adapter == totalSupply() - pendingFeesInShareValue();
+    sumOfBalancesERC4626Adapter == totalSupply() - pendingFeesInShares();
 
 ghost mathint sumOfBalancesERC4626Adapter {
     init_state axiom sumOfBalancesERC4626Adapter == 0;
@@ -192,7 +192,7 @@ invariant mirrorIsCorrectERC20(address x)
 
 
 invariant mirrorIsCorrectERC4626Adapter(address x)
-    to_mathint(balanceOfMirroredERC4626Adapter[x]) == balanceOf(x) - (x == feeCollector() ? pendingFeesInShareValue() : 0);
+    to_mathint(balanceOfMirroredERC4626Adapter[x]) == balanceOf(x) - (x == feeCollector() ? pendingFeesInShares() : 0);
 
 invariant mirrorIsCorrectERC4626Underlying(address x)
     balanceOfMirroredERC4626Underlying[x] == ERC4626.balanceOf(x);
