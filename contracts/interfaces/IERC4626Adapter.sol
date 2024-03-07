@@ -106,7 +106,7 @@ interface IERC4626Adapter is IERC4626 {
     function pendingFeesInShares() external view returns (uint256);
 
     /**
-     * @dev Sets the fee percentage
+     * @dev Sets the fee percentage. Note it cannot be increased.
      * @param pct Fee percentage to be set
      */
     function setFeePct(uint256 pct) external;
@@ -118,7 +118,7 @@ interface IERC4626Adapter is IERC4626 {
     function setFeeCollector(address collector) external;
 
     /**
-     * @dev Withdraw ERC20 tokens to an external account. To be used in order to withdraw claimed protocol rewards.
+     * @dev Withdraws ERC20 or native tokens to an external account. To be used in order to withdraw claimed protocol rewards.
      * @param token Address of the token to be withdrawn
      * @param recipient Address where the tokens will be transferred to
      * @param amount Amount of tokens to withdraw
