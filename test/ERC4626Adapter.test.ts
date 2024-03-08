@@ -58,6 +58,18 @@ describe('ERC4626 Adapter', () => {
       it('sets the owner correctly', async () => {
         expect(await erc4626Adapter.owner()).to.be.equal(owner.address)
       })
+
+      it('sets the name correctly', async () => {
+        const name = 'ERC4626 Adapter' + (await token.name())
+
+        expect(await erc4626Adapter.name()).to.be.equal(name)
+      })
+
+      it('sets the symbol correctly', async () => {
+        const symbol = 'erc4626adapter' + (await token.symbol())
+
+        expect(await erc4626Adapter.symbol()).to.be.equal(symbol)
+      })
     })
 
     context('when the fee percentage is above 1', () => {

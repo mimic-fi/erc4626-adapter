@@ -30,6 +30,12 @@ import './interfaces/IERC4626Adapter.sol';
 contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
     using FixedPoint for uint256;
 
+    // ERC20 name prefix
+    string private constant NAME_PREFIX = 'ERC4626 Adapter';
+
+    // ERC20 symbol prefix
+    string private constant SYMBOL_PREFIX = 'erc4626adapter';
+
     // Reference to the ERC4626 contract
     IERC4626 public immutable override erc4626;
 
@@ -50,7 +56,10 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
      * @param owner Address that will own the ERC4626 adapter
      */
     constructor(IERC4626 _erc4626, uint256 _feePct, address _feeCollector, address owner)
-        ERC20(IERC20Metadata(_erc4626.asset()).symbol(), IERC20Metadata(_erc4626.asset()).name())
+        ERC20(
+            string.concat(NAME_PREFIX, IERC20Metadata(_erc4626.asset()).name()),
+            string.concat(SYMBOL_PREFIX, IERC20Metadata(_erc4626.asset()).symbol())
+        )
         ERC4626(IERC20Metadata(_erc4626.asset()))
     {
         erc4626 = _erc4626;
@@ -96,6 +105,33 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
 
     /**
      * @dev Tells the fees in share value which have not been charged yet
+     *
+     * Explanation of how the fees are calculated:
+     *
+     * We will call the adapter total supply `S` and the underlying total assets `A`. If the assets increase by some
+     * amount `D`, the contract then collects a fee as a factor `f` of this increment. For example, if the are 200 new
+     * assets and the fee is 30%, then `D = 200`, `f = 0.3`, and the fee collector should own `D * f = 60`
+     * assets, regardless of the initial adapter supply `S` or amount of assets `A`.
+     *
+     * Notably, the fee collector is not sent these assets, but rather new adapter tokens `M` are minted for them,
+     * dilluting the value of all other adapter tokens. After minting, the adapter supply will be `S + M`, with `M / (S + M)`
+     * being the share of the underlying assets that corresponds to the newly minted tokens for the fee collector.
+     *
+     * Accordingly, we've stablished that the fee collector is also due `D * f` assets, with `D * f / (A + D)`
+     * being the share these represent of the total underlying assets.
+     *
+     * Therefore: `M / (S + M) = D * f / (A + D)`
+     * Solving for `M`: `M = (S * D * f / (A + D)) / (1 - D * f / (A + D))`
+     *
+     * The code uses slightly different variables, with `currentTotalAssets = A + D`, `previousTotalAssets = A`, `feePct = f`,
+     * `super.totalSupply = S`, and the return value being `M`. Therefore, `pendingFees = D * f`. Using these replacements,
+     * the calculation found in the implementation can be written as: `M = (D * f) / ((A + D - D * f) / S)`.
+     * This expression is equivalent to the one derived above.
+     *
+     * In a numerical example, consider the initial adapter supply `S = 100`, the initial total assets `A = 500`, and
+     * the delta and fees previously mentioned of `D = 200` and `f = 0.3`. The fee collector is therefore due 60
+     * assets, or ~8.57% of the total 700 assets. So, 9.375 adapter tokens will be minted for them, and the ownership
+     * percentage of the adapter is then 9.375 / 109.375, which yields the correct value of ~8.57%.
      */
     function pendingFeesInShares() public view returns (uint256) {
         uint256 currentTotalAssets = totalAssets();
@@ -174,10 +210,13 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Sets the fee percentage
+     * @dev Sets the fee percentage. Note it cannot be increased.
      * @param pct Fee percentage to be set
+     *
+     * Note setting `previousTotalAssets` to `totalAssets()` is not done immediately after calling `_settleFees()`.
+     * However, this is still safe due to the usage of the `nonReentrant` modifier.
      */
-    function setFeePct(uint256 pct) external override onlyOwner {
+    function setFeePct(uint256 pct) external override onlyOwner nonReentrant {
         _settleFees();
         _setFeePct(pct);
         previousTotalAssets = totalAssets();
@@ -186,20 +225,23 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
     /**
      * @dev Sets the fee collector
      * @param collector Fee collector to be set
+     *
+     * Note setting `previousTotalAssets` to `totalAssets()` is not done immediately after calling `_settleFees()`.
+     * However, this is still safe due to the usage of the `nonReentrant` modifier.
      */
-    function setFeeCollector(address collector) external override onlyOwner {
+    function setFeeCollector(address collector) external override onlyOwner nonReentrant {
         _settleFees();
         _setFeeCollector(collector);
         previousTotalAssets = totalAssets();
     }
 
     /**
-     * @dev Withdraw ERC20 tokens to an external account. To be used in order to withdraw claimed protocol rewards.
+     * @dev Withdraws ERC20 or native tokens to an external account. To be used in order to withdraw claimed protocol rewards.
      * @param token Address of the token to be withdrawn
      * @param recipient Address where the tokens will be transferred to
      * @param amount Amount of tokens to withdraw
      */
-    function rescueFunds(address token, address recipient, uint256 amount) external override onlyOwner {
+    function rescueFunds(address token, address recipient, uint256 amount) external override onlyOwner nonReentrant {
         if (token == address(0)) revert ERC4626AdapterTokenZero();
         if (token == address(erc4626)) revert ERC4626AdapterTokenERC4626();
         if (recipient == address(0)) revert ERC4626AdapterRecipientZero();
@@ -215,6 +257,12 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
      * @param receiver Address that will receive the shares
      * @param assets Amount of assets to be deposited
      * @param shares Amount of shares to be minted
+     *
+     * WARNING: FUNCTIONS CALLING `_deposit` MUST USE THE `nonReentrant` MODIFIER
+     *
+     * Note setting `previousTotalAssets` to `totalAssets()` is not done immediately after calling `_settleFees()` because `erc4626.deposit()`
+     * should be called first as it affects `totalAssets()` return value. However, not doing this two-step process atomically
+     * is still safe due to the usage of the `nonReentrant` modifier in the calling functions (`deposit` and `mint`).
      */
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         _settleFees();
@@ -233,6 +281,12 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
      * @param account Address of the account that owns the shares
      * @param assets Amount of assets to be withdrawn
      * @param shares Amount of shares to be redeemed
+     *
+     * WARNING: FUNCTIONS CALLING `_withdraw` MUST USE THE `nonReentrant` MODIFIER
+     *
+     * Note setting `previousTotalAssets` to `totalAssets()` is not done immediately after calling `_settleFees()` because `erc4626.withdraw()`
+     * should be called first as it affects `totalAssets()` return value. However, not doing this two-step process atomically
+     * is still safe due to the usage of the `nonReentrant` modifier in the calling functions (`withdraw` and `redeem`).
      */
     function _withdraw(address caller, address receiver, address account, uint256 assets, uint256 shares)
         internal
@@ -247,7 +301,10 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Settles the fees which have not been charged yet
+     * @dev Settles the fees which have not been charged yet.
+     *
+     * WARNING: AFTER CALLING THIS FUNCTION `previousTotalAssets` MUST BE SET TO `totalAssets()`. IDEALLY, IN THE FOLLOWING LINE.
+     * NOTE IT MIGHT BE UNSAFE TO PERFORM THIS TWO-STEP PROCESS NON-ATOMICALLY.
      */
     function _settleFees() internal {
         uint256 feeAmount = pendingFeesInShares();
@@ -257,7 +314,7 @@ contract ERC4626Adapter is IERC4626Adapter, ERC4626, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Sets the fee percentage
+     * @dev Sets the fee percentage. Note it cannot be increased.
      * @param newFeePct Fee percentage to be set
      */
     function _setFeePct(uint256 newFeePct) internal {
